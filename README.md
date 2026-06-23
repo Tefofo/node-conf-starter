@@ -1,170 +1,124 @@
-# Node Conf Starter
+# SquadRec — Rapid Assembly of Cross-Functional Delivery Squads
 
-A full-stack **Node.js + React** starter template with modern tooling and sensible defaults. Clone it, install, and you're running in two commands — no database or config required to start.
-
-## Tech Stack
-
-**Backend** (`server/`)
-- Node.js + Express (TypeScript, ES modules)
-- SQLite + Prisma ORM (optional — not required to run)
-- Vitest for unit tests
-
-**Frontend** (`client/`)
-- React 18 + Vite (TypeScript)
-- Tailwind CSS
-- Vitest + Testing Library for component tests
-- Playwright for end-to-end tests
-
-The repo is an **npm workspaces monorepo**: one `npm install` at the root sets up both apps.
+A working prototype that helps a Delivery Lead rapidly assemble a cross-functional squad for a piece of work. Capture a delivery need, specify required skills, urgency, and duration — and get a ranked shortlist of suitable internal candidates scored on skill match, availability, role alignment, and workload.
 
 ## Prerequisites
 
-- **Node.js 20+** (the repo pins **Node 22 LTS** via `.nvmrc`)
-- **npm 10+** (ships with Node 20/22)
+- **Node.js 22 LTS** (pinned via `.nvmrc`)
+- **npm 10+** (ships with Node 22)
 
-If you use a Node version manager, select the pinned version first:
+Check your version:
 
 ```bash
-nvm use      # or: fnm use
+node -v   # must be v20 or higher
+npm -v    # must be v10 or higher
 ```
 
-> No version manager? Just make sure `node -v` reports v20 or newer.
+If you use a version manager:
+
+```bash
+nvm use   # or: fnm use
+```
 
 ## Quick Start
 
 ```bash
-# 1. Clone
-git clone https://github.com/thandog/node-conf-starter.git
-cd node-conf-starter
+# 1. Install all dependencies (both server and client)
+npm install
 
-# 2. Install everything (both workspaces) from the committed lockfile
-npm install        # or `npm ci` for an exact, reproducible install
-
-# 3. Run both apps
+# 2. Start both apps together
 npm run dev
 ```
 
-- Frontend: http://localhost:5173
-- Backend:  http://localhost:3001
-- The Vite dev server proxies `/api/*` to the backend, so the app works out of the box.
+Open your browser:
 
-That's it — no environment file or database needed to get started.
+| App | URL |
+|-----|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3001 |
 
-> The backend listens on port **3001** by default. Port 5000 is intentionally avoided because macOS uses it for AirPlay Receiver. Override with `PORT` in `server/.env` if needed.
+The Vite dev server automatically proxies all `/api/*` requests to the backend — no extra config needed.
 
-## Common Scripts
+> **Note:** Data is stored in-memory. It resets every time the server restarts. This is by design for the prototype.
 
-Run from the repo root:
+## How to Use the App
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Start backend + frontend together (hot reload) |
-| `npm run build` | Type-check and build both apps for production |
-| `npm start` | Run the built backend (`server/dist`) |
-| `npm test` | Run all unit/component tests once (backend + frontend) |
-| `npm run test:e2e` | Run Playwright end-to-end tests (see note below) |
-| `npm run lint` | Lint all code with ESLint |
-| `npm run format` | Format all code with Prettier (`format:check` to verify) |
+1. **Dashboard** — see all delivery needs by status
+2. **New Delivery Need** — click `+ New Delivery Need`, fill in the title, urgency, start date, and duration
+3. **Add Skill Slots** — add the skills you need (e.g. `Solution Architecture / SENIOR / 1 person`)
+4. **Generate Recommendations** — the engine scores all candidates and returns a ranked shortlist grouped by skill slot
+5. **Select Candidates** — click to select the best person for each slot; see the coverage bar update
+6. **Confirm Squad** — set start dates and allocation percentages, then confirm
 
-Per-workspace scripts (append `--workspace=server` or `--workspace=client`):
+## Available Skills in Mock Data
 
-| Command | Workspace | What it does |
-| --- | --- | --- |
-| `npm run dev` | both | Start that app's dev server |
-| `npm run build` | both | Build that app |
-| `npm test` | both | Run tests once |
-| `npm run test:watch` | both | Run tests in watch mode |
-| `npm run test:coverage` | both | Run tests with a coverage report |
-| `npm run preview` | client | Preview the production build |
+The prototype includes 16 employees across these skills:
 
-## Building for Production
+`Solution Architecture` · `Cloud Architecture` · `Java Development` · `React Development` · `QA Testing` · `QA Automation` · `Performance Testing` · `Data Engineering` · `Python` · `SQL` · `DevOps` · `Kubernetes` · `UX Design` · `User Research` · `Agile Delivery` · `Stakeholder Management` · `Requirements Analysis` · `Facilitation` · `Microservices` · `API Design` · `Security Architecture`
 
-```bash
-npm run build
+> Skill names are case-insensitive but must match the list above exactly.
+
+## Scoring Formula
+
+Each candidate is scored per skill slot using:
+
+```
+compositeScore = (skillMatch × 0.40) + (availability × 0.30) + (workload × 0.20) + (roleAlignment × 0.10)
 ```
 
-- Backend compiles to `server/dist/` (run with `npm start`).
-- Frontend builds static assets to `client/dist/` (serve with any static host, or `npm run preview --workspace=client`).
+## API Endpoints
 
-## Testing
-
-Unit and component tests run once and exit (CI-friendly):
-
-```bash
-npm test                              # both workspaces
-npm run test:watch --workspace=client # watch mode while developing
-```
-
-### End-to-end (Playwright)
-
-Playwright needs its browsers installed once per machine before the first run:
-
-```bash
-npx playwright install
-npm run test:e2e
-```
-
-E2E tests live in `client/e2e/`. Playwright starts the client dev server automatically.
-
-## Database (optional)
-
-SQLite + Prisma is preconfigured but **not required to run the app**. To use it:
-
-```bash
-# 1. Create the server env file
-cp server/.env.example server/.env
-
-# 2. Generate the Prisma client and create the database
-npm run db:generate --workspace=server
-npm run db:migrate --workspace=server
-```
-
-Other database scripts (run with `--workspace=server`):
-
-| Command | What it does |
-| --- | --- |
-| `npm run db:studio` | Open Prisma Studio to view/edit data |
-| `npm run db:migrate:deploy` | Apply migrations in production |
-
-The Prisma schema lives in `server/prisma/schema.prisma`. The SQLite file and generated client are git-ignored.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/delivery-needs` | List all delivery needs |
+| POST | `/api/v1/delivery-needs` | Create a delivery need |
+| POST | `/api/v1/delivery-needs/{id}/recommendations` | Generate ranked recommendations |
+| GET | `/api/v1/delivery-needs/{id}/recommendations` | Retrieve recommendations |
+| GET | `/api/v1/candidates/{employeeId}` | Get a candidate profile |
+| POST | `/api/v1/candidates/search` | Search candidates by skill |
+| POST | `/api/v1/delivery-needs/{id}/squad` | Confirm the squad |
+| POST | `/api/v1/auth/refresh` | Refresh access token (stub) |
 
 ## Project Structure
 
 ```
 node-conf-starter/
-├── server/                 # Express backend (TypeScript, ESM)
-│   ├── src/
-│   │   ├── index.ts        # Server entry point
-│   │   ├── routes/         # API routes (/api/*)
-│   │   └── middleware/     # Error handling, etc.
-│   ├── prisma/             # Prisma schema (optional DB)
-│   ├── tests/              # Vitest unit tests
-│   └── tsconfig.json       # Emits runnable JS to dist/ (NodeNext)
-├── client/                 # React + Vite frontend
-│   ├── src/                # App source
-│   ├── tests/              # Vitest + Testing Library component tests
-│   ├── e2e/                # Playwright end-to-end tests
-│   └── tsconfig.json       # Type-check only (Vite handles bundling)
-├── tsconfig.json           # Shared, strict compiler base
-├── .nvmrc                  # Pinned Node version
-└── package.json            # npm workspaces + root scripts
+├── server/src/
+│   ├── data/
+│   │   ├── employees.ts       # 16 mock employees with skills & availability
+│   │   └── workRequests.ts    # In-memory delivery needs & squads store
+│   ├── scoring/
+│   │   └── engine.ts          # 40/30/20/10 scoring formula
+│   ├── routes/
+│   │   └── squads.ts          # All API endpoints
+│   └── index.ts               # Express server entry point
+├── client/src/
+│   ├── screens/
+│   │   ├── Dashboard.tsx      # Live delivery needs list
+│   │   ├── CreateStepA.tsx    # Basic details form
+│   │   ├── CreateStepB.tsx    # Skill slots form
+│   │   ├── Recommendations.tsx # Ranked candidates by skill slot
+│   │   └── Screens.tsx        # Loading, NeedDetail, ConfirmSquad, Success
+│   ├── components/
+│   │   ├── Layout.tsx         # Nav + topbar shell
+│   │   └── ui.tsx             # Badge, Button, Card, Avatar etc.
+│   └── App.tsx                # Screen routing + API calls
+├── .kiro/                     # Kiro spec files
+│   ├── steering.md
+│   ├── hooks/lint-on-save.json
+│   └── specs/squad-assembly/
+│       ├── requirements.md
+│       ├── design.md
+│       ├── tasks.md
+│       └── screen-designs.md
+└── package.json               # npm workspaces root
 ```
 
-## API
+## Common Commands
 
-The backend exposes a few sample endpoints:
-
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/health` | Server liveness check |
-| GET | `/api/health` | API health + uptime |
-| GET | `/api/info` | API name/version/environment |
-| POST | `/api/echo` | Echoes the JSON body back |
-
-## License
-
-MIT
-
-## Contributing
-
-Issues and enhancement requests welcome.
+| Command | What it does |
+|---------|-------------|
+| `npm run dev` | Start backend + frontend together |
+| `npm run build` | Type-check and build both apps |
+| `npm run lint` | Lint all TypeScript files |
+| `npm test` | Run all unit tests |

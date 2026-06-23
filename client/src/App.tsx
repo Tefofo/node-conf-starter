@@ -1,68 +1,140 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Layout } from './components/Layout';
+import { Dashboard } from './screens/Dashboard';
+import { CreateStepA } from './screens/CreateStepA';
+import { CreateStepB } from './screens/CreateStepB';
+import { Recommendations } from './screens/Recommendations';
+import { LoadingScreen, NeedDetail, ConfirmSquad, SuccessScreen } from './screens/Screens';
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [health, setHealth] = useState<string>('loading...');
+type Screen = 'dashboard' | 'create-a' | 'create-b' | 'detail' | 'loading' | 'recs' | 'confirm' | 'success';
 
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await fetch('/api/health');
-        const data = await response.json();
-        setHealth(data.status);
-      } catch {
-        setHealth('error');
-      }
-    };
+interface BasicDetails { title: string; description: string; urgency: string; startDate: string; durationWeeks: number; }
+interface SkillSlot { skill: string; level: string; quantity: number; }
+interface SlotResult { skill: string; level: string; quantityRequired: number; candidates: any[]; }
+interface Selection { employeeId: string; skill: string; }
+interface SquadResult { squadId: string; deliveryNeedId: string; status: string; memberCount: number; confirmedBy: string; }
 
-    checkHealth();
-  }, []);
+export default function App() {
+  const [screen, setScreen] = useState<Screen>('dashboard');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const [basicDetails, setBasicDetails] = useState<BasicDetails | null>(null);
+  const [submittedSlots, setSubmittedSlots] = useState<SkillSlot[]>([]);
+  const [deliveryNeedId, setDeliveryNeedId] = useState('');
+  const [skillSlots, setSkillSlots] = useState<SlotResult[]>([]);
+  const [generatedAt, setGeneratedAt] = useState('');
+  const [selections, setSelections] = useState<Selection[]>([]);
+  const [squadResult, setSquadResult] = useState<SquadResult | null>(null);
+
+  const nav = (s: Screen) => { setError(''); setScreen(s); };
+
+  const handleCreateNeed = async (slots: SkillSlot[]) => {
+    if (!basicDetails) return;
+    setLoading(true);
+    setError('');
+    setSubmittedSlots(slots);
+    try {
+      const res = await fetch('/api/v1/delivery-needs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...basicDetails, requiredSkills: slots }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to create delivery need');
+      setDeliveryNeedId(json.deliveryNeedId);
+      nav('detail');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateRecs = async () => {
+    nav('loading');
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/delivery-needs/${deliveryNeedId}/recommendations`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to generate recommendations');
+      setSkillSlots(json.skillSlots);
+      setGeneratedAt(new Date(json.generatedAt).toLocaleString());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmSquad = async (confirmedBy: string, notes: string, assignments: any[]) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/v1/delivery-needs/${deliveryNeedId}/squad`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmedBy, notes, assignments: assignments.map(a => ({ candidateId: a.candidateId, skill: a.skill, agreedStartDate: a.agreedStartDate, allocationPercent: a.allocationPercent })) }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to confirm squad');
+      setSquadResult(json);
+      nav('success');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const breadcrumbs: Record<Screen, { label: string; screen?: Screen }[]> = {
+    'dashboard': [{ label: 'Dashboard' }],
+    'create-a': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: 'Create New' }],
+    'create-b': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: 'Create New' }],
+    'detail': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: deliveryNeedId || 'New Need' }],
+    'loading': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: deliveryNeedId, screen: 'detail' }, { label: 'Generate Recommendations' }],
+    'recs': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: deliveryNeedId, screen: 'detail' }, { label: 'Recommendations' }],
+    'confirm': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: deliveryNeedId, screen: 'detail' }, { label: 'Confirm Squad' }],
+    'success': [{ label: 'Dashboard', screen: 'dashboard' }, { label: 'Delivery Needs' }, { label: deliveryNeedId, screen: 'detail' }, { label: 'Squad Assembled' }],
+  };
+
+  const topbarRight: Record<Screen, React.ReactNode> = {
+    'recs': (
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => nav('loading')} style={{ padding: '0 12px', height: 30, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--text2)' }}>↺ Regenerate</button>
+        <button onClick={() => nav('confirm')} style={{ padding: '0 12px', height: 30, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--blue)', color: '#fff' }}>Review & Confirm Squad →</button>
+      </div>
+    ),
+    'dashboard': null, 'create-a': null, 'create-b': null, 'detail': null, 'loading': null, 'confirm': null, 'success': null,
+  };
+
+  const confirmAssignments = selections.map(s => {
+    const cand = skillSlots.flatMap(sl => sl.candidates).find(c => c.employeeId === s.employeeId);
+    return { candidateId: s.employeeId, name: cand?.name ?? s.employeeId, role: cand?.role ?? '', skill: s.skill, agreedStartDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0], allocationPercent: 50 };
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-        <h1 className="text-4xl font-bold text-center text-indigo-600 mb-6">Node Conf Starter</h1>
-
-        <div className="space-y-6">
-          <div className="bg-indigo-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Backend Status</p>
-            <p className="text-2xl font-bold text-indigo-600 capitalize" data-testid="health">
-              {health}
-            </p>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Counter</p>
-            <p className="text-2xl font-bold text-blue-600" data-testid="count">
-              {count}
-            </p>
-            <button
-              onClick={() => setCount((c) => c + 1)}
-              className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-            >
-              Increment
-            </button>
-          </div>
-
-          <div className="text-center text-sm text-gray-600">
-            <p className="mb-2">Welcome to your full-stack starter!</p>
-            <p>Edit files to get started.</p>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Stack:</p>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>✓ React 18 + Vite</li>
-              <li>✓ Express + Node.js</li>
-              <li>✓ SQLite + Prisma</li>
-              <li>✓ Tailwind CSS</li>
-              <li>✓ Vitest + Playwright</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Layout current={screen} onNav={nav} breadcrumbs={breadcrumbs[screen]} topbarRight={topbarRight[screen]}>
+      {screen === 'dashboard' && <Dashboard onNav={nav} />}
+      {screen === 'create-a' && <CreateStepA onNext={d => { setBasicDetails(d); nav('create-b'); }} onNav={nav} />}
+      {screen === 'create-b' && <CreateStepB onBack={() => nav('create-a')} onSubmit={handleCreateNeed} loading={loading} />}
+      {screen === 'detail' && <NeedDetail
+        deliveryNeedId={deliveryNeedId}
+        title={basicDetails?.title ?? ''}
+        urgency={basicDetails?.urgency ?? 'HIGH'}
+        startDate={basicDetails?.startDate ?? ''}
+        durationWeeks={basicDetails?.durationWeeks ?? 4}
+        createdBy="deliverylead@company.com"
+        createdAt={new Date().toISOString()}
+        requiredSkills={submittedSlots}
+        status="CREATED"
+        onGenerate={handleGenerateRecs}
+        onNav={nav}
+      />}
+      {screen === 'loading' && <LoadingScreen deliveryNeedId={deliveryNeedId} onViewRecs={() => nav('recs')} onRetry={handleGenerateRecs} onBack={() => nav('detail')} />}
+      {screen === 'recs' && <Recommendations skillSlots={skillSlots} generatedAt={generatedAt} onNav={nav} onConfirm={sel => { setSelections(sel); nav('confirm'); }} />}
+      {screen === 'confirm' && <ConfirmSquad deliveryNeedId={deliveryNeedId} assignments={confirmAssignments} onBack={() => nav('recs')} onConfirm={handleConfirmSquad} loading={loading} error={error} />}
+      {screen === 'success' && squadResult && <SuccessScreen {...squadResult} onDashboard={() => nav('dashboard')} />}
+    </Layout>
   );
 }
-
-export default App;

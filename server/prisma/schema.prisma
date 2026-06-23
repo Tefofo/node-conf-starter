@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Squad Recommendation API — Prisma Schema
+// Architecture Document v2.1 — 7 entities, single SQLite file
 
 generator client {
   provider = "prisma-client-js"
@@ -10,11 +10,88 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Example model - customize as needed
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Employee {
+  employeeId                String             @id
+  name                      String
+  role                      String
+  currentAllocationPercentage Int              @default(0)
+  availabilityStatus        String             // AvailabilityStatus enum
+  availableFrom             DateTime?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  skills                    EmployeeSkill[]
+  assignments               SquadAssignment[]
+}
+
+model EmployeeSkill {
+  id          Int      @id @default(autoincrement())
+  employeeId  String
+  skillName   String
+  level       String   // SkillLevel enum
+
+  employee    Employee @relation(fields: [employeeId], references: [employeeId])
+
+  @@unique([employeeId, skillName])
+}
+
+model DeliveryNeed {
+  deliveryNeedId  String    @id
+  title           String
+  description     String    @default("")
+  urgency         String    // Urgency enum
+  startDate       DateTime
+  durationWeeks   Int
+  status          String    @default("CREATED")  // DeliveryNeedStatus enum
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  skillSlots      SkillSlot[]
+  recommendation  RecommendationResult?
+  squad           Squad?
+}
+
+model SkillSlot {
+  id              Int          @id @default(autoincrement())
+  deliveryNeedId  String
+  skillName       String
+  level           String       // SkillLevel enum
+  quantity        Int
+
+  deliveryNeed    DeliveryNeed @relation(fields: [deliveryNeedId], references: [deliveryNeedId])
+}
+
+model RecommendationResult {
+  id              Int          @id @default(autoincrement())
+  deliveryNeedId  String       @unique
+  status          String       // RecommendationStatus enum: PENDING|PROCESSING|COMPLETED|FAILED
+  generatedAt     DateTime?
+  resultPayload   String       // JSON string — SkillSlotResult[]
+
+  deliveryNeed    DeliveryNeed @relation(fields: [deliveryNeedId], references: [deliveryNeedId])
+}
+
+model Squad {
+  squadId         String           @id
+  deliveryNeedId  String           @unique
+  status          String           // SquadStatus enum: ASSEMBLED|PARTIALLY_ASSEMBLED|DISBANDED
+  confirmedBy     String
+  notes           String?
+  assembledAt     DateTime         @default(now())
+
+  deliveryNeed    DeliveryNeed     @relation(fields: [deliveryNeedId], references: [deliveryNeedId])
+  assignments     SquadAssignment[]
+}
+
+model SquadAssignment {
+  id                  Int      @id @default(autoincrement())
+  squadId             String
+  employeeId          String
+  skillName           String
+  agreedStartDate     DateTime
+  allocationPercent   Int
+
+  squad               Squad    @relation(fields: [squadId], references: [squadId])
+  employee            Employee @relation(fields: [employeeId], references: [employeeId])
 }

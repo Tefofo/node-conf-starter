@@ -1,17 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #0F1B2D;
+  --blue: #2563EB;
+  --blue-h: #1D4ED8;
+  --blue-l: #EFF6FF;
+  --blue-m: #BFDBFE;
+  --green: #16A34A;
+  --green-l: #F0FDF4;
+  --green-m: #BBF7D0;
+  --red: #DC2626;
+  --red-l: #FEF2F2;
+  --red-m: #FECACA;
+  --amber: #D97706;
+  --amber-l: #FFFBEB;
+  --amber-m: #FDE68A;
+  --slate: #64748B;
+  --slate-l: #F8FAFC;
+  --slate-m: #E2E8F0;
+  --text: #0F172A;
+  --text2: #475569;
+  --text3: #94A3B8;
+  --border: #E2E8F0;
+  --white: #FFFFFF;
+  --bg: #F8FAFC;
+  --font: 'Inter', system-ui, sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: #E8ECF2;
+  min-height: 100vh;
 }

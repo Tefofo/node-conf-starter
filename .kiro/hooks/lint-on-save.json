@@ -1,0 +1,11 @@
+{
+  "name": "lint-on-save",
+  "trigger": {
+    "on": "file_save",
+    "pattern": "**/*.{ts,tsx}"
+  },
+  "action": {
+    "command": "npx eslint --fix {{filePath}}",
+    "description": "Run ESLint on every TypeScript file on save to catch issues early."
+  }
+}
